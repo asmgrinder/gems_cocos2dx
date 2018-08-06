@@ -150,7 +150,10 @@ bool Gems::init()
         for (unsigned i = 0; i < ARRAYSIZE(_grid[j]); i++)
         {
             fillCell(i, j);
-            _grid[j][i]._sprite->setPosition(getGemPosition(i, j));
+            if (nullptr != _grid[j][i]._sprite)
+            {
+                _grid[j][i]._sprite->setPosition(getGemPosition(i, j));
+            }
         }
     }
     // make field stable
@@ -162,7 +165,7 @@ bool Gems::init()
         {
             for (int i = 0; i < GRID_SIZE; i++)
             {
-                if (nullptr != _grid[j][i]._sprite)
+                if (0 == _grid[j][i]._count)
                 {
                     count += markSameColorGems(i, j);
                 }
@@ -188,11 +191,11 @@ bool Gems::fillCell(int CellX, int CellY)
     Cell& cell = _grid[CellY][CellX];
     cell._type = gemIndex;
     cell._count = 0;
+    cell._sprite = sprite;
     if (nullptr != sprite)
     {
         // add it to scene & set position
         _board->addChild(sprite, 2);
-        cell._sprite = sprite;
         return true;
     }
     return false;
@@ -352,7 +355,8 @@ void Gems::removeMarked(bool UseAnimations)
         for (int j = 0; j < GRID_SIZE; j++)
         {
             Cell& cell = _grid[j][i];
-            if (cell._count > 0)
+            if (cell._count > 0
+                && nullptr != cell._sprite)
             {
                 if (UseAnimations)
                 {
@@ -367,17 +371,20 @@ void Gems::removeMarked(bool UseAnimations)
 //                         scoreStream << std::fixed << sc;
                     }
                     auto label = Label::createWithTTF(scoreStr, "fonts/Marker Felt.ttf", SCORE_LABELS_SIZE);
-                    label->setPosition(cell._sprite->getPosition());
-                    _board->addChild(label, 3);
-                    Vec2 endPoint = label->getPosition();
-                    float labelY = endPoint.y;
-                    endPoint.y = origin.y + visibleSize.height + label->getContentSize().height;
-                    float time = (endPoint.y - labelY) / LABEL_SPEED;
-                    cocos2d::Vector<cocos2d::FiniteTimeAction*> labelActions;
-                    labelActions.pushBack(cocos2d::MoveTo::create(time, endPoint));
-                    labelActions.pushBack(cocos2d::RemoveSelf::create(true));
-                    auto labelSequence = cocos2d::Sequence::create(labelActions);
-                    label->runAction(labelSequence);
+                    if (nullptr != label)
+                    {
+                        label->setPosition(cell._sprite->getPosition());
+                        _board->addChild(label, 3);
+                        Vec2 endPoint = label->getPosition();
+                        float labelY = endPoint.y;
+                        endPoint.y = origin.y + visibleSize.height + label->getContentSize().height;
+                        float time = (endPoint.y - labelY) / LABEL_SPEED;
+                        cocos2d::Vector<cocos2d::FiniteTimeAction*> labelActions;
+                        labelActions.pushBack(cocos2d::MoveTo::create(time, endPoint));
+                        labelActions.pushBack(cocos2d::RemoveSelf::create(true));
+                        auto labelSequence = cocos2d::Sequence::create(labelActions);
+                        label->runAction(labelSequence);
+                    }
 
                     cocos2d::Vector<cocos2d::FiniteTimeAction*> gemActions;
                     gemActions.pushBack(cocos2d::ScaleTo::create(ANIMATION_DURATION, 0));
@@ -477,63 +484,72 @@ bool Gems::onTouchBegan(Touch* touch, Event* event)
             // get touch cell coordinates
             _cellToX = int(localPos.x * GRID_SIZE / boardSize.width);
             _cellToY = int(localPos.y * GRID_SIZE / boardSize.height);
-            // if gem selected
-            if (_cellFromX >= 0
-                && _cellFromY >= 0)
-            {   // remove scaling
-                _grid[_cellFromY][_cellFromX]._sprite->stopAllActions();
-                auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
-                _grid[_cellFromY][_cellFromX]._sprite->runAction(action);
-            }
-            // if selected cell clicked again
-            if (_cellToX == _cellFromX
-                && _cellToY == _cellFromY)
-            {   // remove selection, and set scale to 1
-                auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
-                _grid[_cellFromY][_cellFromX]._sprite->runAction(action);
-
-                _cellFromX = _cellFromY = -1;
-            }
-            else    // clicked not selected cell
-            {   // test if it's neighbour of selected
+            Cell& cellFrom = _grid[_cellFromY][_cellFromX];
+            Cell& cellTo = _grid[_cellToY][_cellToX];
+            if (nullptr != cellFrom._sprite)
+            {
+                // if gem selected
                 if (_cellFromX >= 0
-                    && _cellFromY >= 0
-                    && ((_cellToX == _cellFromX && fabs(_cellToY - _cellFromY) == 1)
-                        || (_cellToY == _cellFromY && fabs(_cellToX - _cellFromX) == 1)))
-                {   // it is, disable input while move is animated
-                    _ignoreInput = true;
-                    // start gems exchange animation
-                    cocos2d::Vector<cocos2d::FiniteTimeAction*> actions1, actions2;
-                    actions1.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellToX, _cellToY)));
-                    actions1.pushBack(cocos2d::ScaleTo::create(0.5f * ANIMATION_DURATION, 1));
-                    auto sequence1 = cocos2d::Sequence::create(actions1);
-                    _grid[_cellFromY][_cellFromX]._sprite->stopAllActions();
-                    _grid[_cellFromY][_cellFromX]._sprite->runAction(sequence1);
-
-                    actions2.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellFromX, _cellFromY)));
-                    actions2.pushBack(cocos2d::ScaleTo::create(0.5f * ANIMATION_DURATION, 1));
-                    auto sequence2 = cocos2d::Sequence::create(actions2);
-                    _grid[_cellToY][_cellToX]._sprite->stopAllActions();
-                    _grid[_cellToY][_cellToX]._sprite->runAction(sequence2);
-                    // schedule move processing when animation is complete
-                    this->scheduleOnce(schedule_selector(Gems::onExchangeComplete), 1.5f*ANIMATION_DURATION);
+                    && _cellFromY >= 0)
+                {   // remove scaling
+                    cellFrom._sprite->stopAllActions();
+                    auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
+                    cellFrom._sprite->runAction(action);
                 }
-                else    // clicked gem is not neighbour of selected, select it
-                {
-                    // remove old selection
+                // if selected cell clicked again
+                if (_cellToX == _cellFromX
+                    && _cellToY == _cellFromY)
+                {   // remove selection, and set scale to 1
+                    auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
+                    cellFrom._sprite->runAction(action);
+
+                    _cellFromX = _cellFromY = -1;
+                }
+                else    // clicked not selected cell
+                {   // test if it's neighbour of selected
                     if (_cellFromX >= 0
-                        && _cellFromY >= 0)
-                    {
-                        auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
-                        _grid[_cellFromY][_cellFromX]._sprite->runAction(action);
+                        && _cellFromY >= 0
+                        && ((_cellToX == _cellFromX && fabs(_cellToY - _cellFromY) == 1)
+                            || (_cellToY == _cellFromY && fabs(_cellToX - _cellFromX) == 1)))
+                    {   // it is, disable input while move is animated
+                        _ignoreInput = true;
+                        // start gems exchange animation
+                        cocos2d::Vector<cocos2d::FiniteTimeAction*> actions1, actions2;
+                        actions1.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellToX, _cellToY)));
+                        actions1.pushBack(cocos2d::ScaleTo::create(0.5f * ANIMATION_DURATION, 1));
+                        auto sequence1 = cocos2d::Sequence::create(actions1);
+                        cellFrom._sprite->stopAllActions();
+                        cellFrom._sprite->runAction(sequence1);
+
+                        actions2.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellFromX, _cellFromY)));
+                        actions2.pushBack(cocos2d::ScaleTo::create(0.5f * ANIMATION_DURATION, 1));
+                        auto sequence2 = cocos2d::Sequence::create(actions2);
+                        cellTo._sprite->stopAllActions();
+                        cellTo._sprite->runAction(sequence2);
+                        // schedule move processing when animation is complete
+                        this->scheduleOnce(schedule_selector(Gems::onExchangeComplete), 1.5f*ANIMATION_DURATION);
                     }
-                    // remember new
-                    _cellFromX = _cellToX;
-                    _cellFromY = _cellToY;
-                    // animate scaling
-                    _grid[_cellFromY][_cellFromX]._sprite->stopAllActions();
-                    auto action = cocos2d::ScaleTo::create(ANIMATION_DURATION, SELECTED_SCALE);
-                    _grid[_cellFromY][_cellFromX]._sprite->runAction(action);
+                    else    // clicked gem is not neighbour of selected, select it
+                    {
+                        // remove old selection
+                        if (_cellFromX >= 0
+                            && _cellFromY >= 0)
+                        {
+                            auto action = cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1);
+                            cellFrom._sprite->runAction(action);
+                        }
+                        // remember new
+                        _cellFromX = _cellToX;
+                        _cellFromY = _cellToY;
+                        Cell& cellFrom = _grid[_cellFromY][_cellFromX];
+                        if (nullptr != cellFrom._sprite)
+                        {
+                            // animate scaling
+                            cellFrom._sprite->stopAllActions();
+                            auto action = cocos2d::ScaleTo::create(ANIMATION_DURATION, SELECTED_SCALE);
+                            cellFrom._sprite->runAction(action);
+                        }
+                    }
                 }
             }
         }
@@ -567,26 +583,32 @@ void Gems::processMove(bool UseAnimations)
         Cell cell = _grid[_cellToY][_cellToX];
         _grid[_cellToY][_cellToX] = _grid[_cellFromY][_cellFromX];
         _grid[_cellFromY][_cellFromX] = cell;
-        if (false != UseAnimations)
+        Cell& cellFrom = _grid[_cellFromY][_cellFromX];
+        Cell& cellTo = _grid[_cellToY][_cellToX];
+        if (nullptr != cellFrom._sprite
+            && nullptr != cellTo._sprite)
         {
-            _grid[_cellToY][_cellToX]._sprite->stopAllActions();
-            cocos2d::Vector<cocos2d::FiniteTimeAction*> actions1;
-            actions1.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellToX, _cellToY)));
-            actions1.pushBack(cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1));
-            auto sequence1 = cocos2d::Sequence::create(actions1);
-            _grid[_cellToY][_cellToX]._sprite->runAction(sequence1);
+            if (false != UseAnimations)
+            {
+                cellTo._sprite->stopAllActions();
+                cocos2d::Vector<cocos2d::FiniteTimeAction*> actions1;
+                actions1.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellToX, _cellToY)));
+                actions1.pushBack(cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1));
+                auto sequence1 = cocos2d::Sequence::create(actions1);
+                cellTo._sprite->runAction(sequence1);
 
-            _grid[_cellFromY][_cellFromX]._sprite->stopAllActions();
-            cocos2d::Vector<cocos2d::FiniteTimeAction*> actions2;
-            actions2.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellFromX, _cellFromY)));
-            actions2.pushBack(cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1));
-            auto sequence2 = cocos2d::Sequence::create(actions2);
-            _grid[_cellFromY][_cellFromX]._sprite->runAction(sequence2);
-        }
-        else
-        {
-            _grid[_cellToY][_cellToX]._sprite->setPosition(getGemPosition(_cellToX, _cellToY));
-            _grid[_cellFromY][_cellFromX]._sprite->setPosition(getGemPosition(_cellFromX, _cellFromY));
+                cellFrom._sprite->stopAllActions();
+                cocos2d::Vector<cocos2d::FiniteTimeAction*> actions2;
+                actions2.pushBack(cocos2d::MoveTo::create(ANIMATION_DURATION, getGemPosition(_cellFromX, _cellFromY)));
+                actions2.pushBack(cocos2d::ScaleTo::create(0.5f*ANIMATION_DURATION, 1));
+                auto sequence2 = cocos2d::Sequence::create(actions2);
+                cellFrom._sprite->runAction(sequence2);
+            }
+            else
+            {
+                cellTo._sprite->setPosition(getGemPosition(_cellToX, _cellToY));
+                cellFrom._sprite->setPosition(getGemPosition(_cellFromX, _cellFromY));
+            }
         }
     }
     else
@@ -613,7 +635,7 @@ void Gems::onMoveComplete(float delta)
     {
         for (int i = 0; i < GRID_SIZE; i++)
         {
-            if (nullptr != _grid[j][i]._sprite)
+            if (0 == _grid[j][i]._count)
             {
                 count += markSameColorGems(i, j);
             }

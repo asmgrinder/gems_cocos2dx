@@ -53,6 +53,7 @@ static void problemLoading(const char* filename)
 // on "init" you need to initialize your instance
 bool Gems::init()
 {
+    //_gemsCount = 0;
     _ignoreInput = false;
     _score = _screenScore = 0;
     _cellFromX = _cellFromY = -1;
@@ -144,6 +145,21 @@ bool Gems::init()
     }
 
     _gems = Director::getInstance()->getTextureCache()->addImage("Gems.png");
+    
+//     auto spritecache = SpriteFrameCache::getInstance();
+//     spritecache->addSpriteFramesWithFile("Gems.plist");
+//     
+//     for (int i = 0; ; i++)
+//     {
+//         char spriteFrameName[32];
+//         sprintf(spriteFrameName, "Gems_%.2d.png", i);
+//         SpriteFrame* sf = spritecache->getSpriteFrameByName(spriteFrameName);
+//         if (nullptr == sf)
+//         {
+//             _gemsCount = i;
+//             break;
+//         }
+//     }
 
     // generate gems grid
     for (unsigned j = 0; j < ARRAYSIZE(_grid); j++)
@@ -186,9 +202,12 @@ bool Gems::fillCell(int CellX, int CellY)
     int gemsCount = int(gemsSize.width / gemsSize.height);
     // random gem index
     int gemIndex = RandomHelper::random_int(0, gemsCount-1);
-    // clone gem
-    Rect rect(gemIndex * gemsSize.height, 0, gemsSize.height, gemsSize.height);
+    Rect rect(gemIndex*gemsSize.height, 0, gemsSize.height, gemsSize.height);
     auto sprite = Sprite::createWithTexture(_gems, rect, false);
+//     char spriteFrameName[32];
+//     sprintf(spriteFrameName, "Gems_%.2d.png", gemIndex);
+//     auto sprite = Sprite::createWithSpriteFrameName(spriteFrameName);
+
     Cell& cell = _grid[CellY][CellX];
     cell._type = gemIndex;
     cell._count = 0;

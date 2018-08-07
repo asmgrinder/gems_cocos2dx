@@ -68,12 +68,14 @@ protected:
     void onMoveComplete(float delta);
     void onUpdateScores(float delta);
 
+//     int _gemsCount;
+    cocos2d::Texture2D* _gems;
     bool _ignoreInput;
     int _score, _screenScore;
     cocos2d::Label* _labelScore;
     int _cellFromX, _cellFromY, _cellToX, _cellToY;
     cocos2d::Sprite* _board;
-    cocos2d::Texture2D* _gems;
+//     cocos2d::Texture2D* _gems;
     Cell _grid[GRID_SIZE][GRID_SIZE];
 };
 

@@ -29,6 +29,7 @@ set(APP_NAME TemplateCpp)
 
 project(${APP_NAME})
 
+set(CMAKE_CXX_FLAGS "-fsanitize=address")
 set(COCOS2DX_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cocos2d)
 set(CMAKE_MODULE_PATH ${COCOS2DX_ROOT_PATH}/cmake/Modules/)
 
@@ -56,10 +57,16 @@ include_directories(
 list(APPEND GAME_SOURCE
      Classes/AppDelegate.cpp
      Classes/GemsScene.cpp
+     Classes/Grid.cpp
+     Classes/Cell.cpp
+     Classes/Selection.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
      Classes/GemsScene.h
+     Classes/Grid.h
+     Classes/Cell.h
+     Classes/Selection.h
      )
 
 if(ANDROID)

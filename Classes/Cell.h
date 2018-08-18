@@ -7,37 +7,25 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
  ****************************************************************************/
-
-#ifndef __GEMS_SCENE_H__
-#define __GEMS_SCENE_H__
+#ifndef __CELL_H__
+#define __CELL_H__
 
 #include "cocos2d.h"
-#include "Grid.h"
 
-class Gems : public cocos2d::Scene
+class Cell
 {
 public:
-
-    static cocos2d::Scene* createScene();
-
-    virtual bool init();
-    
-    // a selector callback
-    void menuCloseCallback(cocos2d::Ref* pSender);
-
-    // implement the "static create()" method manually
-    CREATE_FUNC(Gems);
-
+    Cell();
+    cocos2d::Sprite* GetSprite();
+    unsigned int GetType();
+    unsigned GetCount();
+    void SetSprite(cocos2d::Sprite* Sprite);
+    void SetType(unsigned int Type);
+    void SetCount(unsigned Count);
+    void Swap(Cell& cell);
 protected:
-    virtual bool onTouchBegan(cocos2d::Touch*, cocos2d::Event*);
-    void onExchangeComplete(float delta);
-    void onMoveComplete(float delta);
-    void onUpdateScores(float delta);
-
-    cocos2d::Sprite* _board;
-    Grid _grid;
-    int _score, _screenScore;
-    cocos2d::Label* _labelScore;
+    cocos2d::Sprite* _sprite;
+    unsigned int _type;
+    unsigned _count;
 };
-
-#endif // __GEMS_SCENE_H__
+#endif

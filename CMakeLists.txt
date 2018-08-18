@@ -29,7 +29,7 @@ set(APP_NAME TemplateCpp)
 
 project(${APP_NAME})
 
-set(CMAKE_CXX_FLAGS "-fsanitize=address")
+#set(CMAKE_CXX_FLAGS "-fsanitize=address")
 set(COCOS2DX_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cocos2d)
 set(CMAKE_MODULE_PATH ${COCOS2DX_ROOT_PATH}/cmake/Modules/)
 
